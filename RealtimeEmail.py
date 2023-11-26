@@ -96,11 +96,8 @@ def simulateRealTimeTrading(symbol, momentum_period, threshold):
         countdown(60)
 
 
-# try:
-#     simulateRealTimeTrading(SYMBOL, momentum_period=MOMENTUM_PERIOD, threshold=THRESHOLD)
-# except KeyboardInterrupt:
-#     # Close the database connection when the program is interrupted
-#     conn.close()
-
-
-sendEmail(SYMBOL, "SELL", 12,10,1000)
+try:
+    simulateRealTimeTrading(SYMBOL, momentum_period=MOMENTUM_PERIOD, threshold=THRESHOLD)
+except KeyboardInterrupt:
+    # Close the database connection when the program is interrupted
+    conn.close()
