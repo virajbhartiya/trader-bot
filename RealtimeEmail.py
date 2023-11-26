@@ -1,24 +1,14 @@
-from kiteconnect import KiteConnect
-import configparser
+import yfinance as yf
 import time
 import sqlite3
-from datetime import datetime, timedelta
+import requests
+from datetime import datetime
 
-# Load API credentials from a configuration file
-config = configparser.ConfigParser()
-config.read('config.ini')  # Replace 'config.ini' with the path to your configuration file
-
-api_key = config['Zerodha']['api_key']
-api_secret = config['Zerodha']['api_secret']
-access_token = config['Zerodha']['access_token']
-
-# Initialize Kite API
-kite = KiteConnect(api_key=api_key)
-
-# Set access token
-kite.set_access_token(access_token)
-
-symbol = "GTNTEX"
+SYMBOL = "GTNTEX.BO"
+URL = "https://script.google.com/macros/s/AKfycby-bzlnpF0fU2P9z-lZhWXrAgDZW9gSwJK_-8L5xIINGJj_XtABU91H8oAYhDRxACorrg/exec"
+MOMENTUM_PERIOD = 1
+THRESHOLD = 0.0125
+INITIAL_CAPITAL = 2000
 
 # Connect to SQLite database
 conn = sqlite3.connect('trading_data.db')
@@ -46,34 +36,21 @@ def saveTrade(symbol, action, quantity, price):
     ''', (symbol, action, quantity, price, timestamp))
     conn.commit()
 
+def sendEmail(symbol, action,quantity, rate, balance):
+    response = requests.get(URL+f"?stock={symbol}&action={action}&quantity={quantity}&rate={rate}&balance={balance}")
+    print(response)
 
 def calculateMomentum(history, period):
-    momentum = (history["close"] / history["close"].shift(period)) - 1
+    momentum = (history["Close"] / history["Close"].shift(period)) - 1
     return momentum.iloc[-1]
 
 
 def placeBuyOrder(symbol, price, quantity):
-    order_info = kite.place_order(
-        tradingsymbol=symbol,
-        exchange="BSE",  # Replace with the appropriate exchange
-        transaction_type="BUY",
-        quantity=quantity,
-        order_type="MARKET",
-        product="CNC",
-    )
     print("BUY:", quantity, symbol, "at", str(price))
     saveTrade(symbol, 'BUY', quantity, price)
 
 
 def placeSellOrder(symbol, price, quantity):
-    order_info = kite.place_order(
-        tradingsymbol=symbol,
-        exchange="BSE",  # Replace with the appropriate exchange
-        transaction_type="SELL",
-        quantity=quantity,
-        order_type="MARKET",
-        product="CNC",
-    )
     print("SELL:", quantity, symbol, "at", str(price))
     saveTrade(symbol, 'SELL', quantity, price)
 
@@ -87,32 +64,23 @@ def countdown(t):
         t -= 1
 
 
-def tradeRealtime(symbol, momentum_period, threshold, historical_days):
+def simulateRealTimeTrading(symbol, momentum_period, threshold):
     owned_stocks = {}
-    balance = 10319.100274085999
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=historical_days)
-
+    balance = INITIAL_CAPITAL
     while True:
 
-        # Fetch historical data from Kite Connect API
-        history = kite.historical_data(
-            instrument_token="YOUR_INSTRUMENT_TOKEN",  # Replace with the actual instrument token
-            from_date=start_date.strftime('%Y-%m-%d'),
-            to_date=end_date.strftime('%Y-%m-%d'),
-            interval="minute",
-        )
-
+        history = yf.download(symbol, period="2d", interval="1m")
         latest_momentum = calculateMomentum(history, momentum_period)
 
-        latest_data = history[-1]
-        latest_price = latest_data["close"]
+        latest_data = history.iloc[-1]
+        latest_price = latest_data["Close"]
         print("Latest Price: ", latest_price, " | Latest Momentum: ", latest_momentum)
 
         if latest_momentum > threshold:
             if symbol in owned_stocks and owned_stocks[symbol] > 0:
                 placeSellOrder(symbol, latest_price, owned_stocks[symbol])
                 balance += latest_price * owned_stocks[symbol]
+                sendEmail(symbol, "SELL",owned_stocks[symbol],latest_price, balance )
                 owned_stocks[symbol] = 0
 
         elif latest_momentum < -threshold:
@@ -121,15 +89,18 @@ def tradeRealtime(symbol, momentum_period, threshold, historical_days):
                 owned_stocks[symbol] = quantity_traded
                 placeBuyOrder(symbol, latest_price, quantity_traded)
                 balance -= latest_price * quantity_traded
+                sendEmail(symbol, "BUY",owned_stocks[symbol],latest_price, balance )
 
         print("Balance: ", balance, " | Owned Stocks", owned_stocks)
         print("================================")
         countdown(60)
 
 
-try:
-    historical_days = int(input("Enter the number of days for historical data: "))
-    tradeRealtime(symbol, momentum_period=1, threshold=0.003, historical_days=historical_days)
-except KeyboardInterrupt:
-    # Close the database connection when the program is interrupted
-    conn.close()
+# try:
+#     simulateRealTimeTrading(SYMBOL, momentum_period=MOMENTUM_PERIOD, threshold=THRESHOLD)
+# except KeyboardInterrupt:
+#     # Close the database connection when the program is interrupted
+#     conn.close()
+
+
+sendEmail(SYMBOL, "SELL", 12,10,1000)

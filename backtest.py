@@ -1,14 +1,29 @@
 import yfinance as yf
 import matplotlib.pyplot as plt
 
-symbol = "GTNTEX.BO"
-initial_balance = 1500
-period = "5d"
-interval = "1m"
+SYMBOL = "GTNTEX.BO"
+INITIAL_BALANCE = 2000
+
+PERIOD = "2d"
+INTERVAL = "1m"
+
+MOMENTUM_PERIOD = 1
+THRESHOLD = 0.0125
+
+
+# SYMBOL = "GTNTEX.BO"
+# MOMENTUM_PERIOD = 1
+# THRESHOLD = 0.003
+
+
+# MOMENTUM_PERIOD = 1
+# THRESHOLD = 0.0096
+# SYMBOL = "JINDHOT.BO"
+
+
 def calculateMomentum(history, period):
     momentum = (history["Close"] / history["Close"].shift(period)) - 1
     return momentum
-
 
 def placeBuyOrder(symbol, price, quantity):
     print("BUY:", quantity, symbol, "at", str(price))
@@ -21,11 +36,12 @@ def placeSellOrder(symbol, price, quantity):
 
 
 def backtest(symbol, momentum_period, threshold):
-    df = yf.download(symbol, period=period, interval=interval)
+    df = yf.download(symbol, period=PERIOD, interval=INTERVAL)
     df["Momentum"] = calculateMomentum(df, momentum_period)
-    balance = initial_balance
+    balance = INITIAL_BALANCE
     ordersExecuted = 0
     owned_stocks = {}
+    owned_stocks[SYMBOL] = 0
     df["Action"] = None
     lastPrice = 0
     for index, row in df.iterrows():
@@ -53,9 +69,9 @@ def backtest(symbol, momentum_period, threshold):
     
     balance += owned_stocks[symbol] * lastPrice
     print("========================================")
-    print("Final balance: ",balance)
-    print("Profit/Loss: ", balance-initial_balance)
-    print(f"Profit/Loss Percentage: {round(((balance-initial_balance)/initial_balance)*100,2)}%")
+    print("Final balance: ",round(balance,2))
+    print("Profit/Loss: ", round(balance-INITIAL_BALANCE,2))
+    print(f"Profit/Loss Percentage: {round(((balance-INITIAL_BALANCE)/INITIAL_BALANCE)*100,2)}%")
     print("Total Orders Executed: ", ordersExecuted)
     print("========================================")
     # plotStockPerformance(df, balance)
@@ -97,4 +113,4 @@ def plotStockPerformance(df, balance):
     plt.show()
 
 
-backtest(symbol, momentum_period=1, threshold=0.002)
+backtest(SYMBOL, momentum_period=MOMENTUM_PERIOD, threshold=THRESHOLD)
