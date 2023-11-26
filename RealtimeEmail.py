@@ -5,11 +5,10 @@ import requests
 from datetime import datetime
 
 SYMBOL = "GTNTEX.BO"
-URL = "https://script.google.com/macros/s/AKfycby-bzlnpF0fU2P9z-lZhWXrAgDZW9gSwJK_-8L5xIINGJj_XtABU91H8oAYhDRxACorrg/exec"
+URL = "https://script.google.com/macros/s/AKfycbySBspjosxgN0796_JFNLvaiqbFRTKHe1TKNGTeWs4Ajm54Nd0qgrc_PO-7rsZmnawXhA/exec"
 MOMENTUM_PERIOD = 1
 THRESHOLD = 0.0125
 INITIAL_CAPITAL = 2000
-
 # Connect to SQLite database
 conn = sqlite3.connect('trading_data.db')
 cursor = conn.cursor()
@@ -73,22 +72,22 @@ def simulateRealTimeTrading(symbol, momentum_period, threshold):
         latest_momentum = calculateMomentum(history, momentum_period)
 
         latest_data = history.iloc[-1]
-        latest_price = latest_data["Close"]
+        latest_price = round(latest_data["Close"],2)
         print("Latest Price: ", latest_price, " | Latest Momentum: ", latest_momentum)
 
         if latest_momentum > threshold:
             if symbol in owned_stocks and owned_stocks[symbol] > 0:
                 placeSellOrder(symbol, latest_price, owned_stocks[symbol])
-                balance += latest_price * owned_stocks[symbol]
+                balance += round(latest_price * owned_stocks[symbol],2)
                 sendEmail(symbol, "SELL",owned_stocks[symbol],latest_price, balance )
                 owned_stocks[symbol] = 0
 
         elif latest_momentum < -threshold:
-            quantity_traded = balance // latest_price
+            quantity_traded = int(balance // latest_price)
             if balance > latest_price * quantity_traded and quantity_traded > 0:
                 owned_stocks[symbol] = quantity_traded
                 placeBuyOrder(symbol, latest_price, quantity_traded)
-                balance -= latest_price * quantity_traded
+                balance -= round(latest_price * quantity_traded,2)
                 sendEmail(symbol, "BUY",owned_stocks[symbol],latest_price, balance )
 
         print("Balance: ", balance, " | Owned Stocks", owned_stocks)

@@ -6,7 +6,7 @@ import time
 from tqdm import tqdm
 
 SYMBOL = "GTNTEX.BO"
-INITIAL_BALANCE = 5000
+INITIAL_BALANCE = 2000
 
 PERIOD = "2d"
 INTERVAL = "1m"
