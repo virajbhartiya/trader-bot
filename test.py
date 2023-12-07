@@ -84,6 +84,7 @@ def simulate_real_time_trading(symbol, momentum_period, threshold, initial_capit
         latest_data = history.iloc[-1]
         latest_price = round(latest_data["Close"], 2)
         print("Latest Price: ", latest_price, " | Latest Momentum: ", latest_momentum)
+        
 
         if latest_momentum > threshold:
             if symbol in owned_stocks and owned_stocks[symbol] > 0:
@@ -100,6 +101,8 @@ def simulate_real_time_trading(symbol, momentum_period, threshold, initial_capit
                 balance -= round(latest_price * quantity_traded, 2)
                 send_email(symbol, "BUY", owned_stocks[symbol], latest_price, balance)
 
+        
+
         print("Balance: ", balance, " | Owned Stocks", owned_stocks)
         print("================================")
         countdown(60)
@@ -107,7 +110,7 @@ def simulate_real_time_trading(symbol, momentum_period, threshold, initial_capit
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Real-time stock trading simulation.')
-    parser.add_argument('symbol', type=str, help='Stock symbol to simulate trading for.')
+    parser.add_argument('--symbol', type=str,default="GTNTEX.BO", help='Stock symbol to simulate trading for.')
     parser.add_argument('--threshold', type=float, default=0.0125, help='Momentum threshold for trading.')
     parser.add_argument('--initial-capital', type=float, default=1000, help='Initial capital for trading.')
     args = parser.parse_args()
@@ -115,11 +118,13 @@ def parse_arguments():
 
 
 if __name__ == "__main__":
-    symbol, threshold, initial_capital = parse_arguments()
+    # symbol, threshold, initial_capital = parse_arguments()
+    symbol = "SACHEMT.BO"
+    threshold = 0.019
+    initial_capital = 1000
     conn, cursor = create_database(symbol)
     try:
-        simulate_real_time_trading(symbol, momentum_period=1, threshold=threshold, initial_capital=initial_capital,
-                                   cursor=cursor)
+        simulate_real_time_trading(symbol, momentum_period=1, threshold=threshold, initial_capital=initial_capital,cursor=cursor)
     except KeyboardInterrupt:
         # Close the database connection when the program is interrupted
         conn.close()
